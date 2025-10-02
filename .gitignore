@@ -1,0 +1,11 @@
+pycache/
+*.pyc
+*.pyo
+*.pyd
+env/
+venv/
+Pipfile.lock
+.idea/
+.vscode/
+app/static/uploads/*
+app/static/results/*
