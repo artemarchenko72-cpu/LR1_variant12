@@ -7,9 +7,9 @@ on:
     branches: [ main ]
 
 env:
-SECRET_KEY=${{secrets.SECRET_KEY}}
-RECAPTCHA_PUBLIC_KEY=${{secrets.RECAPTCHA_PUBLIC_KEY}}
-RECAPTCHA_PRIVATE_KEY=${{secrets.RECAPTCHA_PRIVATE_KEY}}
+SECRET_KEY= ${{ secrets.SECRET_KEY }}
+RECAPTCHA_PUBLIC_KEY= $ {{ secrets.RECAPTCHA_PUBLIC_KEY }}
+RECAPTCHA_PRIVATE_KEY =$ {{ secrets.RECAPTCHA_PRIVATE_KEY }}
 
 jobs:
   test:
