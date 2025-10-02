@@ -6,11 +6,16 @@ from PIL import Image
 import numpy as np
 
 from app.forms import UploadNoiseForm
-from app.utils import add_noise, image_to_base64_pil, plot_histogram_base64
+from app.utils import add_noise, image_to_base64_pil, plot_histogram_base64, resize_image
 
+# Инициализация приложения Flask
 app = Flask(__name__, template_folder='templates', static_folder='static')
-# настройка секретного ключа (в PyCharm зададим в Run Configuration)
+
+# Секретный ключ (для сессий и формы)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-change-me')
+
+# Ограничение размера загружаемого файла (2 MB)
+app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024
 
 # Папки для сохранения загруженных и результатных изображений
 UPLOAD_FOLDER = os.path.join(app.root_path, 'static', 'uploads')
@@ -18,10 +23,12 @@ RESULT_FOLDER = os.path.join(app.root_path, 'static', 'results')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(RESULT_FOLDER, exist_ok=True)
 
+# Допустимые расширения
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 
 
 def allowed_file(filename: str) -> bool:
+    """Проверка допустимого расширения файла"""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
@@ -29,7 +36,7 @@ def allowed_file(filename: str) -> bool:
 def index():
     form = UploadNoiseForm()
 
-    # На GET (и при первой загрузке) генерируем простую математическую капчу и сохраняем ответ в session
+    # Генерация простой математической капчи
     if 'captcha_answer' not in session or (form is None):
         a = random.randint(1, 9)
         b = random.randint(1, 9)
@@ -37,30 +44,31 @@ def index():
         session['captcha_answer'] = a + b
 
     if form.validate_on_submit():
-        # проверка капчи
+        # Проверка капчи
         try:
             user_ans = int(form.captcha.data)
         except Exception:
-            flash('Капча должна быть целым числом.', 'danger')
+            flash('Капча должна быть числом.', 'danger')
             return render_template('index.html', form=form, captcha_question=session.get('captcha_question'))
 
         if user_ans != session.get('captcha_answer'):
-            flash('Неверный ответ на капчу. Попробуйте снова.', 'danger')
-            # заново сгенерируем капчу:
+            flash('Неверный ответ на капчу.', 'danger')
+            # Новая капча
             a = random.randint(1, 9)
             b = random.randint(1, 9)
             session['captcha_question'] = f"{a} + {b} = ?"
             session['captcha_answer'] = a + b
             return render_template('index.html', form=form, captcha_question=session.get('captcha_question'))
 
+        # Работа с файлом
         f = form.image.data
         if f and allowed_file(f.filename):
             filename = secure_filename(f.filename)
             saved_path = os.path.join(UPLOAD_FOLDER, filename)
             f.save(saved_path)
 
-            # Открываем картинку, конвертируем в RGB и numpy
-            pil = Image.open(saved_path).convert('RGB')
+            # Уменьшаем изображение (чтобы не вылетать по памяти на Render)
+            pil = resize_image(saved_path, max_size=(800, 800)).convert('RGB')
             arr = np.array(pil)
 
             # Добавляем шум
@@ -72,7 +80,7 @@ def index():
             noisy_path = os.path.join(RESULT_FOLDER, noisy_fname)
             noisy_pil.save(noisy_path)
 
-            # Переводим изображения и гистограммы в base64 для вставки в HTML
+            # Кодируем изображения и гистограммы в base64 для HTML
             orig_b64 = image_to_base64_pil(pil)
             noisy_b64 = image_to_base64_pil(noisy_pil)
             hist_orig = plot_histogram_base64(arr, title='Исходная')
@@ -84,8 +92,6 @@ def index():
                                    hist_orig=hist_orig,
                                    hist_noisy=hist_noisy)
         else:
-            flash('Неверный файл — допустимы: png, jpg, jpeg.', 'danger')
+            flash('Файл должен быть png, jpg или jpeg.', 'danger')
 
-    # Если не POST или валидация не прошла — показываем форму
-    # При каждом рендере показываем актуальную капчу (session['captcha_question'])
     return render_template('index.html', form=form, captcha_question=session.get('captcha_question'))

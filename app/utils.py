@@ -1,44 +1,47 @@
 import numpy as np
 from PIL import Image
-import matplotlib
-matplotlib.use('Agg')   # обязательно для серверного рендера графиков
 import matplotlib.pyplot as plt
-import io
-import base64
+import io, base64, os
 
-def add_noise(img_arr: np.ndarray, noise_percent: int) -> np.ndarray:
-    """
-    Добавляет равномерный (uniform) шум:
-    noise_percent: 0..100 — доля максимального смещения (255 * frac)
-    """
-    frac = max(0.0, min(100.0, float(noise_percent))) / 100.0
-    # шум в диапазоне [-0.5, +0.5] * 255 * frac
-    noise = (np.random.rand(*img_arr.shape) - 0.5) * 255.0 * frac
-    out = img_arr.astype(np.float32) + noise
-    out = np.clip(out, 0, 255).astype(np.uint8)
-    return out
+#Уменьшение картинки (чтобы не падало по памяти на Render)
+def resize_image(image_path, max_size=(800, 800)):
+    img = Image.open(image_path)
+    img.thumbnail(max_size)  # сохраняет пропорции
+    return img
 
-def image_to_base64_pil(img_pil: Image.Image) -> str:
+#Добавление шума
+def add_noise(img_array, noise_level):
+    noise = np.random.randint(-noise_level, noise_level, img_array.shape, dtype='int16')
+    noisy = np.clip(img_array.astype('int16') + noise, 0, 255).astype('uint8')
+    return noisy
+
+#Перевод PIL-изображения в base64 для HTML
+def image_to_base64_pil(img: Image.Image) -> str:
     buf = io.BytesIO()
-    img_pil.save(buf, format='PNG')
+    img.save(buf, format="PNG")
     buf.seek(0)
-    return base64.b64encode(buf.getvalue()).decode('ascii')
+    return "data:image/png;base64," + base64.b64encode(buf.read()).decode('utf-8')
 
-def plot_histogram_base64(img_arr: np.ndarray, title: str='') -> str:
-    """
-    Строит на одном графике кривые распределения для R, G, B и возвращает base64 PNG.
-    """
-    fig = plt.figure(figsize=(6,3))
-    ax = fig.add_subplot(1,1,1)
-    colors = ('r', 'g', 'b')
-    for i, c in enumerate(colors):
-        hist, bins = np.histogram(img_arr[:,:,i].flatten(), bins=256, range=(0,255))
-        ax.plot(hist, label=c)
+#Построение гистограммы и кодирование в base64
+def plot_histogram_base64(img_array, title="Гистограмма") -> str:
+    fig, ax = plt.subplots(figsize=(6, 4))
+
+    # Если картинка цветная (3 канала), строим R, G, B
+    if len(img_array.shape) == 3 and img_array.shape[2] == 3:
+        colors = ('red', 'green', 'blue')
+        for i, col in enumerate(colors):
+            ax.hist(img_array[:, :, i].ravel(), bins=256, color=col, alpha=0.5, label=col.upper())
+        ax.legend()
+    else:
+        # Ч/б изображение
+        ax.hist(img_array.ravel(), bins=256, color='gray', alpha=0.7)
+
     ax.set_title(title)
-    ax.legend()
-    fig.tight_layout()
+    ax.set_xlabel("Pixel value")
+    ax.set_ylabel("Frequency")
+
     buf = io.BytesIO()
-    fig.savefig(buf, format='png')
-    plt.close(fig)
+    fig.savefig(buf, format="PNG")
+    plt.close(fig)  # освобождаем память
     buf.seek(0)
-    return base64.b64encode(buf.getvalue()).decode('ascii')
+    return "data:image/png;base64," + base64.b64encode(buf.read()).decode('utf-8')

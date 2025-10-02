@@ -1,32 +1,41 @@
 <!doctype html>
 <html lang="ru">
 <head>
-  <meta charset="utf-8">
-  <title>Результат — LR1</title>
-  <style>
-    body{font-family: Arial, Helvetica, sans-serif; margin: 20px;}
-    .row{display:flex; gap: 20px; align-items:flex-start;}
-    .col{flex:1;}
-    img{max-width:100%; height:auto; border:1px solid #ddd; padding:4px; background:#fff;}
-    .btn{display:inline-block;margin-top:10px;padding:6px 10px;background:#2d7bf6;color:#fff;border-radius:4px;text-decoration:none;}
-  </style>
+    <meta charset="utf-8">
+    <title>Результат обработки</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        h1 { margin-bottom: 20px; }
+        .images { display: flex; flex-wrap: wrap; gap: 20px; }
+        .images div { text-align: center; }
+        img { max-width: 350px; border: 1px solid #ccc; border-radius: 8px; }
+    </style>
 </head>
 <body>
-  <h2>Результат</h2>
-  <div class="row">
-    <div class="col">
-      <h4>Исходная картинка</h4>
-      <img src="data:image/png;base64,{{ orig_b64 }}" alt="orig">
-      <h5>Гистограмма исходной</h5>
-      <img src="data:image/png;base64,{{ hist_orig }}" alt="hist_orig">
+    <h1>Результат обработки изображения</h1>
+
+    <div class="images">
+        <div>
+            <h3>Исходное изображение</h3>
+            <img src="{{ orig_b64 }}" alt="Исходное изображение">
+        </div>
+        <div>
+            <h3>Зашумлённое изображение</h3>
+            <img src="{{ noisy_b64 }}" alt="Зашумлённое изображение">
+        </div>
     </div>
-    <div class="col">
-      <h4>Зашумлённая картинка</h4>
-      <img src="data:image/png;base64,{{ noisy_b64 }}" alt="noisy">
-      <h5>Гистограмма зашумлённой</h5>
-      <img src="data:image/png;base64,{{ hist_noisy }}" alt="hist_noisy">
+
+    <div class="images">
+        <div>
+            <h3>Гистограмма исходного</h3>
+            <img src="{{ hist_orig }}" alt="Гистограмма исходного">
+        </div>
+        <div>
+            <h3>Гистограмма зашумлённого</h3>
+            <img src="{{ hist_noisy }}" alt="Гистограмма зашумлённого">
+        </div>
     </div>
-  </div>
-  <a class="btn" href="{{ url_for('index') }}">Вернуться и загрузить ещё</a>
+
+    <p><a href="{{ url_for('index') }}">← Назад</a></p>
 </body>
 </html>
