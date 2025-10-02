@@ -7,5 +7,6 @@ venv/
 Pipfile.lock
 .idea/
 .vscode/
+.env/
 app/static/uploads/*
 app/static/results/*

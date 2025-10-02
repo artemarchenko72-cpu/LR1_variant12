@@ -4,12 +4,14 @@
   <meta charset="utf-8">
   <title>LR1 — Зашумление изображения</title>
   <style>
-    body{font-family: Arial, Helvetica, sans-serif; margin: 20px;}
-    .container{max-width:800px; margin: 0 auto;}
-    .flash{padding:10px;margin:10px 0;border-radius:4px;}
-    .danger{background:#fdecea;color:#611a15;}
-    label{display:block;margin-top:8px;}
+    body { font-family: Arial, Helvetica, sans-serif; margin: 20px; }
+    .container { max-width: 800px; margin: 0 auto; }
+    .flash { padding: 10px; margin: 10px 0; border-radius: 4px; }
+    .danger { background: #fdecea; color: #611a15; }
+    label { display: block; margin-top: 8px; }
   </style>
+  <!-- Подключаем Google reCAPTCHA -->
+  <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 </head>
 <body>
   <div class="container">
@@ -25,22 +27,30 @@
 
     <form method="post" enctype="multipart/form-data">
       {{ form.csrf_token }}
+
       <label>{{ form.image.label }}<br>{{ form.image() }}</label>
       <label>{{ form.noise.label }}<br>{{ form.noise(size=5) }}</label>
 
-      <label>Капча: <strong>{{ captcha_question }}</strong></label>
-      <label>{{ form.captcha.label }}<br>{{ form.captcha(size=5) }}</label>
+      <!-- Google reCAPTCHA -->
+      <div style="margin-top:10px;">
+        {{ form.recaptcha }}
+      </div>
 
-      <div style="margin-top:12px;">{{ form.submit() }}</div>
+      <div style="margin-top:12px;">
+        {{ form.submit() }}
+      </div>
     </form>
 
-    <!-- 🔽 Добавляем сюда примечание -->
+    <!-- Примечание об ограничениях -->
     <p style="margin-top:15px; color:#444;">
-      <em>Примечание:</em> Для экономии памяти при обработке 
-      загружаемые изображения ограничены по размеру (до 2 МБ) 
+      <em>Примечание:</em> Для экономии памяти при обработке
+      загружаемые изображения ограничены по размеру (до 2 МБ)
       и автоматически уменьшаются до 800×800 пикселей.
     </p>
 
+    <p style="margin-top:15px; color:#666;">
+      Допустимые форматы файлов: png, jpg, jpeg.
+    </p>
   </div>
 </body>
 </html>

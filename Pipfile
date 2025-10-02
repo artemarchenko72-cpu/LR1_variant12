@@ -13,10 +13,10 @@ pillow = "*"
 numpy = "*"
 matplotlib = "*"
 gunicorn = "*"
+python-dotenv = "*"
 
 [dev-packages]
 pytest = "*"
 
 [scripts]
 start = "gunicorn run:app --bind 0.0.0.0:$PORT"
-

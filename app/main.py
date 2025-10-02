@@ -1,23 +1,29 @@
 import os
-import random
-from flask import Flask, render_template, flash, session
+from flask import Flask, render_template, flash, request
 from werkzeug.utils import secure_filename
 from PIL import Image
 import numpy as np
+from dotenv import load_dotenv
 
 from app.forms import UploadNoiseForm
 from app.utils import add_noise, image_to_base64_pil, plot_histogram_base64, resize_image
 
-# Инициализация приложения Flask
+# Загружаем переменные окружения из .env (локально)
+load_dotenv()
+
+# Создаём Flask-приложение
 app = Flask(__name__, template_folder='templates', static_folder='static')
 
-# Секретный ключ (для сессий и формы)
+# Ключи и настройки
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-change-me')
+app.config['RECAPTCHA_PUBLIC_KEY'] = os.environ.get('RECAPTCHA_PUBLIC_KEY')
+app.config['RECAPTCHA_PRIVATE_KEY'] = os.environ.get('RECAPTCHA_PRIVATE_KEY')
+app.config['WTF_CSRF_ENABLED'] = False
 
-# Ограничение размера загружаемого файла (2 MB)
+# Ограничение размера загружаемого файла (2 МБ)
 app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024
 
-# Папки для сохранения загруженных и результатных изображений
+# Папки для загрузки и результатов
 UPLOAD_FOLDER = os.path.join(app.root_path, 'static', 'uploads')
 RESULT_FOLDER = os.path.join(app.root_path, 'static', 'results')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -36,38 +42,14 @@ def allowed_file(filename: str) -> bool:
 def index():
     form = UploadNoiseForm()
 
-    # Генерация простой математической капчи
-    if 'captcha_answer' not in session or (form is None):
-        a = random.randint(1, 9)
-        b = random.randint(1, 9)
-        session['captcha_question'] = f"{a} + {b} = ?"
-        session['captcha_answer'] = a + b
-
-    if form.validate_on_submit():
-        # Проверка капчи
-        try:
-            user_ans = int(form.captcha.data)
-        except Exception:
-            flash('Капча должна быть числом.', 'danger')
-            return render_template('index.html', form=form, captcha_question=session.get('captcha_question'))
-
-        if user_ans != session.get('captcha_answer'):
-            flash('Неверный ответ на капчу.', 'danger')
-            # Новая капча
-            a = random.randint(1, 9)
-            b = random.randint(1, 9)
-            session['captcha_question'] = f"{a} + {b} = ?"
-            session['captcha_answer'] = a + b
-            return render_template('index.html', form=form, captcha_question=session.get('captcha_question'))
-
-        # Работа с файлом
+    if form.validate_on_submit():  # reCAPTCHA проверяется
         f = form.image.data
         if f and allowed_file(f.filename):
             filename = secure_filename(f.filename)
             saved_path = os.path.join(UPLOAD_FOLDER, filename)
             f.save(saved_path)
 
-            # Уменьшаем изображение (чтобы не вылетать по памяти на Render)
+            # Уменьшаем изображение
             pil = resize_image(saved_path, max_size=(800, 800)).convert('RGB')
             arr = np.array(pil)
 
@@ -80,7 +62,7 @@ def index():
             noisy_path = os.path.join(RESULT_FOLDER, noisy_fname)
             noisy_pil.save(noisy_path)
 
-            # Кодируем изображения и гистограммы в base64 для HTML
+            # Кодируем изображения и гистограммы
             orig_b64 = image_to_base64_pil(pil)
             noisy_b64 = image_to_base64_pil(noisy_pil)
             hist_orig = plot_histogram_base64(arr, title='Исходная')
@@ -93,5 +75,10 @@ def index():
                                    hist_noisy=hist_noisy)
         else:
             flash('Файл должен быть png, jpg или jpeg.', 'danger')
+    else:
+        if request.method == 'POST':  # Отладка: если не прошло
+            print("Form errors:", form.errors)
+            for field, errs in form.errors.items():
+                flash(f"{field}: {'; '.join(errs)}", 'danger')
 
-    return render_template('index.html', form=form, captcha_question=session.get('captcha_question'))
+    return render_template('index.html', form=form)
