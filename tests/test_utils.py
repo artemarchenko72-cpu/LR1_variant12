@@ -1,4 +1,3 @@
-𝔸𝕟𝕒𝕤𝕥𝕒𝕤𝕚𝕒, [02.10.2025 16:03]
 name: CI
 
 on:
@@ -26,12 +25,3 @@ jobs:
 
       - name: Run tests
         run: pipenv run pytest || echo "Нет тестов"
-
-𝔸𝕟𝕒𝕤𝕥𝕒𝕤𝕚𝕒, [02.10.2025 16:11]
-from app.utils import add_noise
-import numpy as np
-
-def test_add_noise_shape():
-    arr = np.zeros((5, 5, 3), dtype=np.uint8)
-    noisy = add_noise(arr, 30)
-    assert noisy.shape == arr.shape
